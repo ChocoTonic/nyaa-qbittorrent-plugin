@@ -3,7 +3,10 @@ name = "nyaa-qbittorrent-plugin"
 version = "0.0.0"
 description = "qBittorrent search engine plugins for nyaa.si and sukebei.nyaa.si, generated from a shared stdlib-only core."
 readme = "README.md"
-requires-python = ">=3.9"
+# Governs the dev/test environment only (pytest 9 + ruff need >=3.10). The
+# *generated plugins* stay 3.9-compatible for older qBittorrent runtimes -- that
+# is enforced separately by [tool.ruff] target-version and the stdlib-only code.
+requires-python = ">=3.10"
 dependencies = []
 
 [project.optional-dependencies]
