@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+  schedule:
+    - cron: "0 12 * * 1" # weekly liveness check
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v8.1.0
+        with:
+          enable-cache: true
+      - run: uv sync --extra dev
+      - name: Lint
+        run: uv run ruff check .
+      - name: Build plugins
+        run: uv run python tools/build_plugin.py
+      - name: Unit tests
+        run: uv run python -m pytest
+
+  live:
+    # Network test against the real feeds; not on master pushes.
+    if: github.event_name != 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v8.1.0
+        with:
+          enable-cache: true
+      - run: uv sync --extra dev
+      - name: Live tests
+        run: uv run python -m pytest -m live --reruns 3 --reruns-delay 5

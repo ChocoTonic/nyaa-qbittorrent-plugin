@@ -1,0 +1,61 @@
+name: Release plugins
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v8.1.0
+        with:
+          enable-cache: true
+      - run: uv sync --extra dev
+
+      - name: Generate plugins
+        env:
+          PLUGIN_VERSION: "1.${{ github.run_number }}"
+        run: uv run python tools/build_plugin.py
+
+      - name: Skip if plugin bodies unchanged since last release
+        id: changed
+        run: |
+          set -e
+          changed=no
+          for f in nyaa sukebei; do
+            # Compare ignoring the VERSION header line (which always differs).
+            new=$(grep -v '^# VERSION:' "engine/$f.py")
+            if gh release download latest --pattern "$f.py" --dir /tmp/prev 2>/dev/null; then
+              old=$(grep -v '^# VERSION:' "/tmp/prev/$f.py" || true)
+            else
+              old=""
+            fi
+            if [ "$new" != "$old" ]; then changed=yes; fi
+          done
+          echo "changed=$changed" >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Publish release
+        if: steps.changed.outputs.changed == 'yes'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="v1.${{ github.run_number }}"
+          gh release create "$tag" engine/nyaa.py engine/sukebei.py \
+            --title "$tag" \
+            --notes "qBittorrent search plugins for nyaa.si and sukebei.nyaa.si.
+
+          Install in qBittorrent (Search → Search plugins → Install a new one → Web link):
+          - Nyaa: https://github.com/ChocoTonic/nyaa-qbittorrent-plugin/releases/latest/download/nyaa.py
+          - Sukebei: https://github.com/ChocoTonic/nyaa-qbittorrent-plugin/releases/latest/download/sukebei.py"
+          # Keep a moving 'latest' tag pointing at these assets.
+          gh release delete latest --yes --cleanup-tag 2>/dev/null || true
+          gh release create latest engine/nyaa.py engine/sukebei.py \
+            --title "latest" --notes "Always points at the newest plugin build ($tag)."
