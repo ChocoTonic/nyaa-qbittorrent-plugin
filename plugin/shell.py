@@ -6,6 +6,19 @@
 # Regenerate with `make plugin`.
 # Project: https://github.com/ChocoTonic/nyaa-qbittorrent-plugin
 
+import ssl
+
+# Generated from the vendored certifi bundle, without loading OS trust roots.
+_CA_BUNDLE = __CA_BUNDLE__
+
+
+def _tls_context():
+    return ssl.create_default_context(cadata=_CA_BUNDLE)
+
+
+def _retrieve_url(url):
+    return retrieve_url(url, ssl_context=_tls_context())
+
 try:
     from helpers import download_file, retrieve_url
     from novaprinter import prettyPrinter
@@ -31,7 +44,7 @@ class __PLUGIN_CLASS__(object):
 
     def search(self, what, cat="all"):
         cat_code = self.supported_categories.get(cat, "0_0")
-        for item in fetch_results(retrieve_url, self.url, cat_code, what):
+        for item in fetch_results(_retrieve_url, self.url, cat_code, what):
             prettyPrinter(to_result_row(item, self.url))
 
     def download_torrent(self, info):
@@ -41,4 +54,4 @@ class __PLUGIN_CLASS__(object):
         if info.startswith("magnet:"):
             print(info + " " + info)
         else:
-            print(download_file(info))
+            print(download_file(info, ssl_context=_tls_context()))
