@@ -3,8 +3,10 @@
 Run with: pytest -m live
 """
 
+import ssl
 from urllib.request import Request, urlopen
 
+import certifi
 import pytest
 
 from nyaa_core import core
@@ -12,7 +14,8 @@ from nyaa_core import core
 
 def _fetch(url):
     req = Request(url, headers={"User-Agent": "Mozilla/5.0"})
-    with urlopen(req, timeout=30) as resp:  # noqa: S310 (trusted, fixed hosts)
+    context = ssl.create_default_context(cafile=certifi.where())
+    with urlopen(req, timeout=30, context=context) as resp:  # noqa: S310 (trusted, fixed hosts)
         return resp.read().decode("utf-8", "replace")
 
 
