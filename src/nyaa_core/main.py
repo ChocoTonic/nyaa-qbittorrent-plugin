@@ -5,7 +5,10 @@ Usage:
 """
 
 import argparse
+import ssl
 from urllib.request import Request, urlopen
+
+import certifi
 
 from .core import fetch_results, to_result_row
 
@@ -17,7 +20,7 @@ SITES = {
 
 def _fetch(url):
     req = Request(url, headers={"User-Agent": "Mozilla/5.0"})
-    with urlopen(req) as resp:  # noqa: S310 (trusted, fixed hosts)
+    with urlopen(req, context=ssl.create_default_context(cafile=certifi.where())) as resp:  # noqa: S310 (trusted, fixed hosts)
         return resp.read().decode("utf-8", "replace")
 
 

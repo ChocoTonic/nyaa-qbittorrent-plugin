@@ -7,7 +7,7 @@ readme = "README.md"
 # *generated plugins* stay 3.9-compatible for older qBittorrent runtimes -- that
 # is enforced separately by [tool.ruff] target-version and the stdlib-only code.
 requires-python = ">=3.10"
-dependencies = []
+dependencies = ["certifi>=2026.10.19"]
 
 [project.optional-dependencies]
 dev = [
