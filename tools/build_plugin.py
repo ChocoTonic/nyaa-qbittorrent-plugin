@@ -93,6 +93,7 @@ def generate(site):
     if CORE_PLACEHOLDER not in shell_src:
         raise SystemExit("plugin/shell.py is missing placeholder: " + CORE_PLACEHOLDER)
     out = shell_src.replace(VERSION_PLACEHOLDER, _plugin_version())
+    out = out.replace("__CA_BUNDLE__", repr(_read(os.path.join(ROOT, "plugin", "cacert.pem"))))
     out = out.replace(CORE_PLACEHOLDER, _core_body(_read(CORE)))
     out = out.replace("__PLUGIN_CLASS__", site["class"])
     out = out.replace("__PLUGIN_NAME__", site["name"])

@@ -2,8 +2,10 @@
 
 import importlib.util
 import os
+import ssl
 import sys
 import types
+from unittest.mock import patch
 
 import build_plugin
 import pytest
@@ -18,11 +20,35 @@ PLUGINS = [
 ]
 
 
+@pytest.mark.parametrize("module_name,url,name", PLUGINS)
+def test_helper_requests_receive_explicit_patched_trust(module_name, url, name):
+    mod = _load_engine(module_name, [])
+    contexts = []
+    def retrieve(target, **kwargs):
+        contexts.append(kwargs["ssl_context"])
+        return SAMPLE_RSS
+    def download(target, **kwargs):
+        contexts.append(kwargs["ssl_context"])
+        return "/tmp/offline.torrent " + target
+    with patch.object(mod, "retrieve_url", side_effect=retrieve):
+        mod._retrieve_url(url)
+    with patch.object(mod, "download_file", side_effect=download):
+        getattr(mod, module_name)().download_torrent(url + "/offline.torrent")
+    assert len(contexts) == 2
+    for context in contexts:
+        assert context.verify_mode == ssl.CERT_REQUIRED
+        assert context.check_hostname
+        assert len(context.get_ca_certs()) == 120
+        assert not any(
+            "AAA Certificate Services" in str(c["subject"]) for c in context.get_ca_certs()
+        )
+
+
 def _load_engine(module_name, captured):
     """Import an engine/*.py file with fake helpers/novaprinter injected."""
     fake_helpers = types.ModuleType("helpers")
-    fake_helpers.retrieve_url = lambda url: SAMPLE_RSS
-    fake_helpers.download_file = lambda url: url + " /tmp/fake.torrent"
+    fake_helpers.retrieve_url = lambda url, **kwargs: SAMPLE_RSS
+    fake_helpers.download_file = lambda url, **kwargs: url + " /tmp/fake.torrent"
     fake_novaprinter = types.ModuleType("novaprinter")
     fake_novaprinter.prettyPrinter = lambda d: captured.append(d)
 
